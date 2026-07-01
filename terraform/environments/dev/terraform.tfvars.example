@@ -1,0 +1,14 @@
+# Copie para terraform.tfvars e ajuste. NÃO versione segredos reais.
+project = "bookloop"
+region  = "us-east-1"
+
+# Segredos: prefira exportar como env vars (TF_VAR_db_password / TF_VAR_jwt_secret)
+# db_password = "..."
+# jwt_secret  = "um-segredo-de-no-minimo-32-bytes"
+
+# Imagens no ECR (App Runner/ECS não puxam do DockerHub — ver ADR-0002/0007)
+backend_image  = "<acct>.dkr.ecr.us-east-1.amazonaws.com/bookloop-backend:latest"
+frontend_image = "<acct>.dkr.ecr.us-east-1.amazonaws.com/bookloop-frontend:latest"
+
+# Access role para ECR privado (deixe vazio se usar ECR Public)
+apprunner_access_role_arn = ""

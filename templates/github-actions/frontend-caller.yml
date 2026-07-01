@@ -1,0 +1,17 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  build:
+    uses: <org>/bookloop-platform/.github/workflows/frontend-react.yml@v1
+    with:
+      image_name: <org>/<servico>-frontend
+      node_version: "20"
+      vite_api_url: "https://api.example.com/api/v1"
+    secrets:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}

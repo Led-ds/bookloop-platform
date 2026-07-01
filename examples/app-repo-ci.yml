@@ -1,0 +1,17 @@
+# Exemplo: .github/workflows/ci.yml de um serviço backend consumindo a plataforma.
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  build:
+    uses: bookloop-org/bookloop-platform/.github/workflows/backend-java.yml@v1
+    with:
+      image_name: bookloop-org/bookloop-backend
+      java_version: "21"
+    secrets:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
