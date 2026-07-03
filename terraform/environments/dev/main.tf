@@ -21,10 +21,12 @@ module "security_groups" {
 }
 
 module "secrets" {
-  source      = "../../modules/secrets-manager"
-  project     = var.project
-  environment = var.environment
-  secrets = {
+  source       = "../../modules/secrets-manager"
+  project      = var.project
+  environment  = var.environment
+  secret_names = ["DB_PASSWORD", "JWT_SECRET"]
+
+  secret_values = {
     DB_PASSWORD = var.db_password
     JWT_SECRET  = var.jwt_secret
   }
@@ -54,19 +56,39 @@ resource "aws_apprunner_vpc_connector" "this" {
   security_groups    = [module.security_groups.apprunner_connector_sg_id]
 }
 
+module "ecr" {
+  source      = "../../modules/ecr"
+  project     = var.project
+  environment = var.environment
+
+  repositories = {
+    backend = {
+      name             = "bookloop-api"
+      scan_on_push     = true
+      keep_last_images = 10
+    }
+
+    frontend = {
+      name             = "bookloop-web"
+      scan_on_push     = true
+      keep_last_images = 10
+    }
+  }
+}
+
 module "backend" {
-  source                = "../../modules/app-runner"
-  project               = var.project
-  environment           = var.environment
-  service_name          = "backend"
-  image_identifier      = var.backend_image
-  access_role_arn       = var.apprunner_access_role_arn
-  instance_role_arn     = module.iam.apprunner_instance_role_arn
-  port                  = 8080
-  health_check_path     = "/actuator/health"
-  vpc_connector_arn     = aws_apprunner_vpc_connector.this.arn
+  source            = "../../modules/app-runner"
+  project           = var.project
+  environment       = var.environment
+  service_name      = "backend"
+  image_identifier  = "${module.ecr.repository_urls["backend"]}:latest"
+  access_role_arn   = module.iam.apprunner_ecr_access_role_arn
+  instance_role_arn = module.iam.apprunner_instance_role_arn
+  port              = 8080
+  health_check_path = "/api/v1/books"
+  vpc_connector_arn = aws_apprunner_vpc_connector.this.arn
   runtime_env = {
-    DB_URL = "jdbc:postgresql://${module.rds.address}:5432/${module.rds.db_name}"
+    DB_URL  = "jdbc:postgresql://${module.rds.address}:5432/${module.rds.db_name}"
     DB_USER = "bookloop"
   }
   runtime_secrets = {
@@ -80,8 +102,8 @@ module "frontend" {
   project           = var.project
   environment       = var.environment
   service_name      = "frontend"
-  image_identifier  = var.frontend_image
-  access_role_arn   = var.apprunner_access_role_arn
+  image_identifier  = "${module.ecr.repository_urls["frontend"]}:latest"
+  access_role_arn   = module.iam.apprunner_ecr_access_role_arn
   instance_role_arn = module.iam.apprunner_instance_role_arn
   port              = 80
   health_check_path = "/"

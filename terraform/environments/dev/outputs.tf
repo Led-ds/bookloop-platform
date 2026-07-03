@@ -12,3 +12,14 @@ output "rds_endpoint" {
   description = "Endpoint do RDS."
   value       = module.rds.endpoint
 }
+
+output "ecr_backend_url" {
+  description = "URL do repositório ECR do backend."
+  value       = module.ecr.repository_urls["backend"]
+}
+
+output "ecr_frontend_url" {
+  description = "URL do repositório ECR do frontend."
+  value       = module.ecr.repository_urls["frontend"]
+}
+
