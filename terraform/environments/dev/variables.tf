@@ -32,12 +32,20 @@ variable "jwt_secret" {
 
 variable "backend_image" {
   type        = string
-  description = "URI da imagem do backend no ECR (ver ADR-0002/0007)."
+  description = "Override da imagem do backend no ECR. Vazio = usa o repositório ECR do ambiente:latest."
+  default     = ""
 }
 
 variable "frontend_image" {
   type        = string
-  description = "URI da imagem do frontend no ECR."
+  description = "Override da imagem do frontend no ECR. Vazio = usa o repositório ECR do ambiente:latest."
+  default     = ""
+}
+
+variable "app_cors_allowed_origins" {
+  type        = string
+  description = "Origens CORS do backend (APP_CORS_ALLOWED_ORIGINS), separadas por vírgula."
+  default     = "http://localhost:5173,https://kehmmmut47.us-east-1.awsapprunner.com"
 }
 
 variable "apprunner_access_role_arn" {

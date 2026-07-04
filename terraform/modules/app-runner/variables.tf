@@ -77,6 +77,12 @@ variable "vpc_connector_arn" {
   default     = ""
 }
 
+variable "auto_deployments_enabled" {
+  type        = bool
+  description = "Redeploy automático quando a imagem :tag muda no ECR. Default false (deploy controlado)."
+  default     = false
+}
+
 variable "tags" {
   type        = map(string)
   description = "Tags adicionais."

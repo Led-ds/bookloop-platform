@@ -54,6 +54,43 @@ variable "multi_az" {
   default     = false
 }
 
+# --- Ajustes operacionais (todos aplicados IN-PLACE; nenhum recria a instância) ---
+variable "backup_retention_period" {
+  type        = number
+  description = "Dias de retenção de backup automático (0 desativa)."
+  default     = 7
+}
+
+variable "backup_window" {
+  type        = string
+  description = "Janela UTC de backup (hh:mm-hh:mm)."
+  default     = "03:00-04:00"
+}
+
+variable "auto_minor_version_upgrade" {
+  type        = bool
+  description = "Aplicar upgrades menores automaticamente na janela de manutenção."
+  default     = true
+}
+
+variable "max_allocated_storage" {
+  type        = number
+  description = "Teto do storage autoscaling em GB (0 desativa o autoscaling)."
+  default     = 0
+}
+
+variable "performance_insights_enabled" {
+  type        = bool
+  description = "Habilita Performance Insights (custa em algumas classes; off em dev)."
+  default     = false
+}
+
+variable "enabled_cloudwatch_logs_exports" {
+  type        = list(string)
+  description = "Logs exportados para o CloudWatch (ex.: [\"postgresql\"]). Vazio = nenhum."
+  default     = []
+}
+
 variable "tags" {
   type        = map(string)
   description = "Tags adicionais."
