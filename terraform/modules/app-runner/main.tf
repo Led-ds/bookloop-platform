@@ -34,7 +34,7 @@ resource "aws_apprunner_service" "this" {
       }
     }
 
-    auto_deployments_enabled = false
+    auto_deployments_enabled = var.auto_deployments_enabled
   }
 
   instance_configuration {

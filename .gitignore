@@ -1,0 +1,32 @@
+# Terraform
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+terraform.tfvars
+terraform.tfvars.json
+*.auto.tfvars
+*.auto.tfvars.json
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+tfplan
+*.tfplan
+
+# Segredos / credenciais — NUNCA versionar
+*.pem
+*.key
+.env
+.env.*
+credentials
+aws-credentials*
+**/secrets/**
+
+# IDE / SO
+.idea/
+*.iml
+.vscode/
+.DS_Store

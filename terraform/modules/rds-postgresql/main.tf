@@ -25,5 +25,13 @@ resource "aws_db_instance" "this" {
   storage_encrypted      = true
   skip_final_snapshot    = var.environment != "prod"
   deletion_protection    = var.environment == "prod"
-  tags                   = merge(local.tags, { Name = "${local.name}-pg" })
+
+  backup_retention_period         = var.backup_retention_period
+  backup_window                   = var.backup_window
+  auto_minor_version_upgrade      = var.auto_minor_version_upgrade
+  max_allocated_storage           = var.max_allocated_storage > 0 ? var.max_allocated_storage : null
+  performance_insights_enabled    = var.performance_insights_enabled
+  enabled_cloudwatch_logs_exports = var.enabled_cloudwatch_logs_exports
+
+  tags = merge(local.tags, { Name = "${local.name}-pg" })
 }

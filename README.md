@@ -139,3 +139,107 @@ terraform init && terraform plan
 ---
 
 Mantido como **Documentation as Code**. Contribuições via PR seguindo os padrões em `standards/`.
+
+---
+
+## Infraestrutura AWS (v1.1)
+
+Visão geral, operação e troubleshooting do provisionamento em `terraform/`. Detalhes por tema em
+`docs/operations/` e procedimentos em `docs/runbooks/`.
+
+### Visão geral
+
+Região `us-east-1`. Terraform com **state remoto** (S3 `bookloop-tfstate-ledds-us-east-1`) e **lock**
+(DynamoDB `bookloop-tf-lock`). Ambiente `dev` compõe os módulos: `vpc`, `security-groups`, `secrets-manager`,
+`iam`, `rds-postgresql`, `ecr`, `app-runner` (backend + frontend) e `cloudwatch`. Backend e frontend rodam
+em **App Runner** (imagens no **ECR**); backend alcança o **RDS** privado via **VPC connector**.
+
+> App Runner está fechado para novos clientes desde 30/04/2026 (ADR-0007). Não migramos nesta versão;
+> a estratégia para **ECS Express Mode** está no ADR-0008. O Terraform é modular para facilitar a troca.
+
+### Pré-requisitos
+
+- Terraform >= 1.9, AWS CLI v2, Docker.
+- Credenciais AWS (preferir SSO/temporárias, não Access Key fixa).
+- Bucket/tabela de state já provisionados pelo `terraform/bootstrap`.
+
+### Bootstrap (uma vez por conta)
+
+```bash
+cd terraform/bootstrap
+terraform init && terraform apply    # cria bucket S3 do state + tabela de lock
+```
+
+### Fluxo dev: init / validate / plan
+
+```bash
+scripts/terraform-validate-dev.sh                 # fmt -recursive + init -backend=false + validate
+export TF_VAR_db_password='...' TF_VAR_jwt_secret='...(>=32 bytes)'
+scripts/terraform-plan-dev.sh                     # init + plan -out=tfplan (revise!)
+scripts/terraform-apply-dev.sh                    # aplica o tfplan revisado (confirmação explícita)
+```
+
+Nunca rode `terraform apply` sem revisar o `plan`. Se o plan indicar destruição do RDS ou recriação
+de serviços, **pare** e investigue (ver runbooks).
+
+### Variáveis (dev)
+
+Copie e ajuste — segredos nunca versionados (estão no `.gitignore`):
+
+```bash
+cd terraform/environments/dev
+cp terraform.tfvars.example terraform.tfvars
+```
+
+Principais: `app_cors_allowed_origins` (injetada no backend como `APP_CORS_ALLOWED_ORIGINS`),
+`db_password`/`jwt_secret` (via `TF_VAR_*`), `backend_image`/`frontend_image` (override opcional;
+por padrão usa o repositório ECR do ambiente `:latest`).
+
+### Deploy (manual)
+
+1. Build da imagem no repo de aplicação → `docker build` (frontend com `--build-arg VITE_API_URL=...`).
+2. `scripts/ecr-login.sh` e `docker push` para o ECR.
+3. `aws apprunner start-deployment --service-arn <arn>` (ou redeploy pelo console).
+
+> **`VITE_API_URL` é variável de _build_ do frontend, não de runtime.** Ela é "assada" no bundle
+> durante o `docker build` (por isso vai como `--build-arg`, já feito no workflow reutilizável
+> `github/workflows/frontend-react.yml`). Trocar a URL da API exige **rebuild** da imagem do frontend —
+> não adianta setar env no App Runner do frontend.
+
+### ECR
+
+Módulo `ecr`: `scan_on_push`, lifecycle (mantém as últimas N imagens), encryption AES256, tags e
+outputs (`repository_urls`/`arns`/`names`). Repositórios: `bookloop-api`, `bookloop-web`.
+
+### App Runner
+
+Módulo `app-runner` parametrizável: `image_identifier`, `access_role_arn` (pull ECR privado),
+`instance_role_arn`, `runtime_env`, `runtime_secrets`, `health_check_path` (**default `/actuator/health`**),
+`vpc_connector_arn` (opcional), `auto_deployments_enabled` (default `false`). Backend porta 8080,
+frontend porta 80.
+
+### RDS PostgreSQL
+
+Módulo `rds-postgresql`: `storage_encrypted = true`, `publicly_accessible = false`, `deletion_protection`
+e `skip_final_snapshot` por ambiente. Ajustes operacionais **in-place** disponíveis (backup, autoscaling,
+PI, logs exports) — ver `docs/runbooks/rds.md`. Em dev: `db.t4g.micro`, PI off, retenção curta.
+
+### Secrets Manager
+
+`DB_PASSWORD` e `JWT_SECRET` no Secrets Manager, injetados como **secrets** no App Runner. Os outputs
+expõem apenas **ARNs**, nunca valores. Ver `docs/operations/iam-and-oidc.md`.
+
+### CloudWatch
+
+Log groups do App Runner (`.../service` e `.../application`) e como investigar CREATE_FAILED, health
+check e CORS: `docs/operations/cloudwatch.md`.
+
+### Troubleshooting (runbooks)
+
+`deploy` · `rollback` · `incident-db-connection` · `ecr-token-expired` · `apprunner-health-check` ·
+`cors` · `terraform-lock` · `rds` · `destroy-dev` — em `docs/runbooks/`.
+
+### Segurança
+
+`.gitignore` cobre `.terraform/`, `*.tfstate*`, `terraform.tfvars*`, `*.pem/*.key/.env*`, credenciais e
+segredos. Nenhum segredo é versionado; senhas vêm de `TF_VAR_*`/Secrets Manager.

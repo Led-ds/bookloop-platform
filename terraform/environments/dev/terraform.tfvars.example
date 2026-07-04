@@ -1,14 +1,27 @@
-# Copie para terraform.tfvars e ajuste. NÃO versione segredos reais.
+# ============================================================
+# Ambiente DEV — copie e ajuste:
+#   cp terraform.tfvars.example terraform.tfvars
+# NÃO versione o terraform.tfvars real (está no .gitignore).
+# ============================================================
+
 project = "bookloop"
 region  = "us-east-1"
 
-# Segredos: prefira exportar como env vars (TF_VAR_db_password / TF_VAR_jwt_secret)
-# db_password = "..."
-# jwt_secret  = "um-segredo-de-no-minimo-32-bytes"
+# --- Segredos (NÃO versione valores reais) ---
+# Prefira exportar como variáveis de ambiente antes do plan/apply:
+#   export TF_VAR_db_password='...'
+#   export TF_VAR_jwt_secret='um-segredo-de-no-minimo-32-bytes'
+# db_password = "REDACTED"
+# jwt_secret  = "REDACTED-min-32-bytes"
 
-# Imagens no ECR (App Runner/ECS não puxam do DockerHub — ver ADR-0002/0007)
-backend_image  = "<acct>.dkr.ecr.us-east-1.amazonaws.com/bookloop-backend:latest"
-frontend_image = "<acct>.dkr.ecr.us-east-1.amazonaws.com/bookloop-frontend:latest"
+# --- CORS do backend (APP_CORS_ALLOWED_ORIGINS) ---
+app_cors_allowed_origins = "http://localhost:5173,https://URL_DO_FRONTEND.awsapprunner.com"
 
-# Access role para ECR privado (deixe vazio se usar ECR Public)
+# --- Imagens (opcional) ---
+# Por padrão o dev usa o repositório ECR do próprio ambiente (:latest).
+# Preencha apenas para fixar uma imagem/tag específica (App Runner só puxa de ECR — ver ADR-0002/0007):
+# backend_image  = "<acct>.dkr.ecr.us-east-1.amazonaws.com/bookloop-api:<tag>"
+# frontend_image = "<acct>.dkr.ecr.us-east-1.amazonaws.com/bookloop-web:<tag>"
+
+# Access role para ECR privado (vazio se usar ECR Public)
 apprunner_access_role_arn = ""

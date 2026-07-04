@@ -47,6 +47,10 @@ module "rds" {
   vpc_security_group_ids = [module.security_groups.rds_sg_id]
   password               = var.db_password
   multi_az               = false
+
+  backup_retention_period    = 1
+  auto_minor_version_upgrade = true
+  max_allocated_storage      = 50
 }
 
 # VPC Connector para o App Runner alcançar o RDS privado.
@@ -81,15 +85,16 @@ module "backend" {
   project           = var.project
   environment       = var.environment
   service_name      = "backend"
-  image_identifier  = "${module.ecr.repository_urls["backend"]}:latest"
+  image_identifier  = var.backend_image != "" ? var.backend_image : "${module.ecr.repository_urls["backend"]}:latest"
   access_role_arn   = module.iam.apprunner_ecr_access_role_arn
   instance_role_arn = module.iam.apprunner_instance_role_arn
   port              = 8080
-  health_check_path = "/api/v1/books"
+  health_check_path = "/actuator/health"
   vpc_connector_arn = aws_apprunner_vpc_connector.this.arn
   runtime_env = {
-    DB_URL  = "jdbc:postgresql://${module.rds.address}:5432/${module.rds.db_name}"
-    DB_USER = "bookloop"
+    DB_URL                   = "jdbc:postgresql://${module.rds.address}:5432/${module.rds.db_name}"
+    DB_USER                  = "bookloop"
+    APP_CORS_ALLOWED_ORIGINS = var.app_cors_allowed_origins
   }
   runtime_secrets = {
     DB_PASSWORD = module.secrets.secret_arns["DB_PASSWORD"]
@@ -102,7 +107,7 @@ module "frontend" {
   project           = var.project
   environment       = var.environment
   service_name      = "frontend"
-  image_identifier  = "${module.ecr.repository_urls["frontend"]}:latest"
+  image_identifier  = var.frontend_image != "" ? var.frontend_image : "${module.ecr.repository_urls["frontend"]}:latest"
   access_role_arn   = module.iam.apprunner_ecr_access_role_arn
   instance_role_arn = module.iam.apprunner_instance_role_arn
   port              = 80
