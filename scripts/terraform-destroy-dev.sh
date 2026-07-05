@@ -22,7 +22,10 @@ terraform init -reconfigure -input=false >/dev/null
 terraform validate
 
 # Guard 3: o environment resolvido precisa ser 'dev' (falha fechado).
-ENV="$(echo 'var.environment' | terraform console 2>/dev/null | tr -d '"' || true)"
+# -lock=false: leitura, não trava o state. O grep isola o token puro (ex.: 'dev'),
+# descartando mensagens de lock ("Acquiring state lock...") que o console possa imprimir.
+ENV="$(printf 'var.environment\n' | terraform console -lock=false 2>/dev/null \
+       | tr -d '"' | grep -E '^[a-z0-9_-]+$' | tail -n1 || true)"
 if [ "$ENV" != "dev" ]; then
   echo "ERRO: var.environment='${ENV:-?}' (esperado 'dev'). NUNCA rode este script fora de dev. Abortando." >&2
   exit 1
