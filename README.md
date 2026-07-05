@@ -234,6 +234,9 @@ expõem apenas **ARNs**, nunca valores. Ver `docs/operations/iam-and-oidc.md`.
 Log groups do App Runner (`.../service` e `.../application`) e como investigar CREATE_FAILED, health
 check e CORS: `docs/operations/cloudwatch.md`.
 
+Plano de **upload real** (avatar/capa/documentos via S3 + URLs assinadas), ainda não implementado:
+`docs/operations/storage-uploads.md`.
+
 ### Troubleshooting (runbooks)
 
 `deploy` · `rollback` · `incident-db-connection` · `ecr-token-expired` · `apprunner-health-check` ·
