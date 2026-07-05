@@ -246,3 +246,38 @@ Plano de **upload real** (avatar/capa/documentos via S3 + URLs assinadas), ainda
 
 `.gitignore` cobre `.terraform/`, `*.tfstate*`, `terraform.tfvars*`, `*.pem/*.key/.env*`, credenciais e
 segredos. Nenhum segredo é versionado; senhas vêm de `TF_VAR_*`/Secrets Manager.
+
+### Destruir ambiente DEV
+
+Camada segura para destruir o **dev** com poucos comandos, sem rodar no ambiente errado e sem tocar
+no bootstrap (state/lock). Runbook completo: `docs/runbooks/destroy-dev.md`.
+
+**Quando usar:** encerrar o dev para economizar custo ou recriar do zero, sempre após revisar o preview.
+**Quando NÃO usar:** em prod (os scripts recusam se `var.environment != dev`); se precisar dos dados
+do RDS (dev usa `skip_final_snapshot = true`, sem snapshot final); para "limpar" o state (o bootstrap
+não é tocado).
+
+```bash
+# 1) PREVIEW — não destrói nada, só lista o que seria removido
+scripts/terraform-plan-destroy-dev.sh
+
+# 2) DESTROY real — mostra avisos, valida o ambiente e exige a frase exata
+scripts/terraform-destroy-dev.sh
+#    confirmação exigida (digite exatamente):  destroy bookloop dev
+```
+
+**Proteções:** os scripts só rodam em `terraform/environments/dev`, recusam caminhos com `prod`,
+resolvem `var.environment` via `terraform console` e abortam se não for `dev`; o destroy real ainda
+exige a frase `destroy bookloop dev`. Nenhuma credencial é embutida.
+
+**Riscos:** RDS dev é destruído **sem snapshot final** (perda de dados — tire snapshot manual antes se
+precisar); Secrets somem com **janela de recuperação de 30 dias**; ECR só é removido se os repositórios
+estiverem **vazios** (o destroy falha se houver imagens — esvazie antes; ver runbook).
+
+**DEV × bootstrap:** destruir o dev remove os recursos de aplicação/rede do ambiente. O **bootstrap**
+(bucket de state S3 + tabela de lock DynamoDB, em `terraform/bootstrap`) é um root **separado** e
+**não** é destruído pelos scripts. Removê-lo apagaria o histórico de state — só ao descomissionar tudo.
+
+_Evolução opcional (não aplicada):_ para o destroy do dev funcionar mesmo com imagens no ECR, dá para
+habilitar `force_delete` **somente em dev** no módulo `ecr`. É uma mudança de `.tf` (in-place, requer
+`apply` revisado) e está documentada como opção — não vem ligada por padrão, para manter o comportamento seguro.
