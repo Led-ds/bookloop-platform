@@ -15,10 +15,14 @@ terraform init -reconfigure -input=false >/dev/null
 terraform validate
 
 # Guard 2: o environment resolvido precisa ser 'dev'.
-# -lock=false: leitura, não trava o state. O grep isola o token puro (ex.: 'dev'),
-# descartando mensagens de lock ("Acquiring state lock...") que o console possa imprimir.
-ENV="$(printf 'var.environment\n' | terraform console -lock=false 2>/dev/null \
-       | tr -d '"' | grep -E '^[a-z0-9_-]+$' | tail -n1 || true)"
+# Resolve o environment SEM state/lock/console (robusto entre versões do Terraform):
+# 1) usa TF_VAR_environment, se exportado; 2) senão, lê o default de variables.tf.
+ENV="${TF_VAR_environment:-}"
+if [ -z "$ENV" ]; then
+  ENV="$(grep -A3 'variable "environment"' variables.tf \
+         | grep -E 'default[[:space:]]*=' | head -n1 \
+         | sed -E 's/.*default[[:space:]]*=[[:space:]]*"?([a-z0-9_-]+)"?.*/\1/')"
+fi
 if [ "$ENV" != "dev" ]; then
   echo "ERRO: var.environment='${ENV:-?}' (esperado 'dev'). Abortando por segurança." >&2
   exit 1
