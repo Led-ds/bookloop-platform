@@ -5,6 +5,11 @@ set -euo pipefail
 
 cd "$(dirname "$0")/../terraform/environments/dev"
 
+# Secrets obrigatórios (mesmo para planejar/destruir o Terraform avalia toda a config).
+# Nunca versionados — venha de TF_VAR_* no seu ambiente, igual ao terraform-plan-dev.sh.
+: "${TF_VAR_db_password:?defina TF_VAR_db_password (ex.: export TF_VAR_db_password=...)}"
+: "${TF_VAR_jwt_secret:?defina TF_VAR_jwt_secret (min. 32 bytes)}"
+
 # Guard 1: precisa estar no diretório do dev.
 case "$PWD" in
   */environments/dev) : ;;
